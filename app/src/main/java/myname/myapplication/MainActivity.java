@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
@@ -16,6 +17,7 @@ import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -235,11 +237,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     else
                     {
+
+
+                        String contactNumber = getPhoneNumber(speech,this);
+                                if(contactNumber.equals("Unsaved")) {
+                                    String fail;
+                                    txt.setText("Contact not found... Please try again !!");
+                                    fail = txt.getText().toString();
+                                    speechVoice.speak(String.valueOf(fail),QUEUE_FLUSH,null);
+
+                                }
+                                else {
+
+                                    Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + contactNumber));
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                    startActivity(intent);
+                                }
+
                         x=0;
-                        String speech;
-                        txt.setText("Please try again !!");
-                        speech = txt.getText().toString();
-                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
                     }
                 }
 
@@ -271,6 +286,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             }
         }
+    }
+
+    public String getPhoneNumber(String name,Context context) {
+        String ret = null;
+        String selection = ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME+" like'%" + name +"%'";
+        String[] projection = new String[] { ContactsContract.CommonDataKinds.Phone.NUMBER};
+        Cursor c = context.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection, selection, null, null);
+        if (c.moveToFirst()) {
+            ret = c.getString(0);
+        }
+        c.close();
+        if(ret==null)
+            ret = "Unsaved";
+        return ret;
     }
 
     private void repeatAudio() {
