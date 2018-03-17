@@ -9,8 +9,38 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        android:id="@+id/txt"
+        android:text="Shake phone and speek on the mic"
+        android:id="@+id/txt" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/imageView"
+        android:layout_above="@+id/txtText"
+        android:layout_below="@id/txt"
         />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/txtText"
+        android:layout_above="@+id/txtName"
+        android:text="Text: "
+        />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:id="@+id/txtDescription"
+        android:text="Description..."/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/txtDescription"
+        android:text="Name: "
+        android:id="@+id/txtName"/>
 
 </RelativeLayout>
