@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -77,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected static final int RESULT_SPEECH = 1;
     protected static final int REQUEST_CAMERA = 2;
     protected static final int CAMERA_FRONT_REQUEST_CODE = 3;
+    protected static final int SELECT_FILE = 4;
     public static int x=0;
 
 
@@ -218,10 +220,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         getImageRecognized();
 
                     }
+                    else if(speech.contains("gallery"))
+                    {
+                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
+                        openGallery();
+                    }
                     else if(speech.contains("front camera")||txt.getText().toString().contains("selfie"))
                     {
                         speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
                         openFrontCamera();
+                        x=0;
                     }
 
                     else if(speech.contains("capture")||txt.getText().toString().contains("camera"))
@@ -238,11 +246,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     else
                     {
 
-
                         String contactNumber = getPhoneNumber(speech,this);
                                 if(contactNumber.equals("Unsaved")) {
                                     String fail;
-                                    txt.setText("Contact not found... Please try again !!");
+                                    txt.setText("Please try again !!");
                                     fail = txt.getText().toString();
                                     speechVoice.speak(String.valueOf(fail),QUEUE_FLUSH,null);
 
@@ -283,9 +290,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 imageView.setImageBitmap(mBitmap);
                 //mBitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
                 getImageRecognized();
+                break;
+            }
 
+            case SELECT_FILE:{
+                x=0;
+                Uri selectImage = data.getData();
+                imageView.setImageURI(selectImage);
+                imageView.buildDrawingCache();
+                mBitmap = imageView.getDrawingCache();
+                outputStream = new ByteArrayOutputStream();
+                mBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                getImageRecognized();
             }
         }
+    }
+
+    public void openGallery() {
+        Intent intent = new Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setType("image/*");
+        startActivityForResult(intent.createChooser(intent,"Select File"),SELECT_FILE);
     }
 
     public String getPhoneNumber(String name,Context context) {
@@ -314,16 +338,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void openFrontCamera() {
 
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);;
-//        intent.putExtra("android.intent.extras.CAMERA_FACING", android.hardware.Camera.CameraInfo.CAMERA_FACING_FRONT);
-//        intent.putExtra("android.intent.extras.LENS_FACING_FRONT", 1);
-//        intent.putExtra("android.intent.extra.USE_FRONT_CAMERA", true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            intent.putExtra("android.intent.extras.LENS_FACING_FRONT", 1);
-        } else {
-            intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
+        Camera cam;
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        int cameraCount = Camera.getNumberOfCameras();
+        for (int camIdx = 0; camIdx < cameraCount; camIdx++) {
+            Camera.getCameraInfo(camIdx, cameraInfo);
+            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                try {
+                    cam = Camera.open(camIdx);
+                } catch (RuntimeException e) {
+                    Log.e("error", "Camera failed to open: " + e.getLocalizedMessage());
+                }
+            }
         }
-        startActivityForResult(intent, CAMERA_FRONT_REQUEST_CODE);
+
     }
 
     public void CaptureImage() {
