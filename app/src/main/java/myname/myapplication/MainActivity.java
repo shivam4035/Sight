@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -88,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     StringBuilder stringBuilderText = new StringBuilder();
     StringBuilder stringBuilderImage = new StringBuilder();
     StringBuilder stringBuilderFace = new StringBuilder();
+    String speech;
 
     //Convert image to stream
     ByteArrayOutputStream outputStream;
@@ -109,6 +111,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         txtText = (TextView)findViewById(R.id.txtText);
 
         imageView = (ImageView)findViewById(R.id.imageView);
+
+        //Convert image to stream
+        outputStream = new ByteArrayOutputStream();
+
+        mBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.sachin);
+        imageView = (ImageView)findViewById(R.id.imageView);
+        imageView.setImageBitmap(mBitmap);
+        mBitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
 
         image = new TextToSpeech(this, this);
         image.setLanguage(Locale.ENGLISH);
@@ -166,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             last_a = a;
             last_b = b;
             last_c  = c;
+
         }
     }
 
@@ -185,19 +196,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     ArrayList<String> text = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
 
-                    txt.setText(text.get(0));
+                    speech = new String();
 
-                    if(txt.getText().toString().contains("front camera")||txt.getText().toString().contains("selfie"))
+                    txt.setText(text.get(0));
+                    speech = txt.getText().toString();
+                    x=1;
+                    if(txt.getText().toString()=="")
                     {
+                        x=0;
+                        txt.setText("Please try again !!");
+                        speech = txt.getText().toString();
+                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
+                    }
+
+
+                    if(speech.contains("recognise"))
+                    {
+                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
+                        getImageRecognized();
+
+                    }
+                    else if(speech.contains("front camera")||txt.getText().toString().contains("selfie"))
+                    {
+                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
                         openFrontCamera();
                     }
 
-                    else if(txt.getText().toString().contains("capture")||txt.getText().toString().contains("camera"))
+                    else if(speech.contains("capture")||txt.getText().toString().contains("camera"))
                     {
+                        speechVoice.speak(String.valueOf(speech),TextToSpeech.QUEUE_FLUSH,null);
                         CaptureImage();
+                    }
+                    else if(speech.contains("repeat"))
+                    {
+                        speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
+                        x=0;
+                        repeatAudio();
                     }
                     else
                     {
+                        x=0;
                         String speech;
                         txt.setText("Please try again !!");
                         speech = txt.getText().toString();
@@ -208,6 +246,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 break;
             }
             case REQUEST_CAMERA:{
+                x=0;
                 if(resultCode == Activity.RESULT_OK){
 
                         //Bundle bundle = data.getExtras();
@@ -216,18 +255,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         outputStream = new ByteArrayOutputStream();
                         mBitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
                         imageView.setImageBitmap(mBitmap);
+
                         getImageRecognized();
+
                     }
                     break;
                 }
             case CAMERA_FRONT_REQUEST_CODE:{
+                x=0;
                 //Bundle bundle = data.getExtras();
                 mBitmap = (Bitmap) data.getExtras().get("data");
                 imageView.setImageBitmap(mBitmap);
                 //mBitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
                 getImageRecognized();
+
             }
         }
+    }
+
+    private void repeatAudio() {
+
+        face.speak(String.valueOf(stringBuilderFace),QUEUE_FLUSH,null);
+
+        image.speak(String.valueOf(stringBuilderImage),QUEUE_FLUSH,null);
+
+        text.speak(String.valueOf(stringBuilderText),QUEUE_FLUSH,null);
     }
 
     public void openFrontCamera() {
@@ -244,8 +296,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startActivityForResult(intent, CAMERA_FRONT_REQUEST_CODE);
     }
 
-    public void CaptureImage()
-    {
+    public void CaptureImage() {
 
                     Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
@@ -311,6 +362,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void getImageRecognized() {
 
+        x=0;
+
         if(isMobileDataEnable()==false)
         {
             // createNetErrorDialog();
@@ -320,6 +373,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             inputStreamforImage = new ByteArrayInputStream(outputStream.toByteArray());
             inputStreamforText = new ByteArrayInputStream(outputStream.toByteArray());
             InputStreamforFace = new ByteArrayInputStream(outputStream.toByteArray());
+
+            txtDescription.setText("Description..");
+            txtName.setText("Name: ");
+            txtText.setText("Text: ");
 
             final AsyncTask<InputStream, String, String> visionTask = new AsyncTask<InputStream, String, String>() {
                 ProgressDialog mDialog = new ProgressDialog(MainActivity.this);
