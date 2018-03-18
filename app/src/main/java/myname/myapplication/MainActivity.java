@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     StringBuilder stringBuilderText = new StringBuilder();
     StringBuilder stringBuilderImage = new StringBuilder();
     StringBuilder stringBuilderFace = new StringBuilder();
-    String speech;
+    String speech,lastWord,message,contactNumber;
 
     //Convert image to stream
     ByteArrayOutputStream outputStream;
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //Convert image to stream
         outputStream = new ByteArrayOutputStream();
 
-        mBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.sachin);
+        mBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.dangel);
         imageView = (ImageView)findViewById(R.id.imageView);
         imageView.setImageBitmap(mBitmap);
         mBitmap.compress(Bitmap.CompressFormat.JPEG,100,outputStream);
@@ -150,6 +150,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //Setting dismiss by shaking
     @Override
     public void onSensorChanged(SensorEvent event) {
+
+        if (speechVoice != null) {
+            speechVoice.stop();
+            speechVoice.shutdown();
+
+        }
         long curTime  = System.currentTimeMillis();
 
         if((curTime-lastUpdate) > UPDATE_PERIOD){
@@ -195,6 +201,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         switch (requestCode) {
             case RESULT_SPEECH: {
+
+
                 if (resultCode == RESULT_OK && null != data) {
 
                     ArrayList<String> text = data
@@ -243,10 +251,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         x=0;
                         repeatAudio();
                     }
-                    else
+                    else if(speech.contains("call"))
                     {
-
-                        String contactNumber = getPhoneNumber(speech,this);
+                         lastWord = speech.substring(speech.lastIndexOf(" ")+1);
+                         contactNumber = getPhoneNumber(lastWord,this);
+                        x=0;
                                 if(contactNumber.equals("Unsaved")) {
                                     String fail;
                                     txt.setText("Please try again !!");
@@ -262,6 +271,47 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 }
 
                         x=0;
+                    }
+                    else if(speech.contains("message")||speech.contains("send")) {
+                        lastWord = speech.substring(speech.lastIndexOf(" ")+1);
+                        contactNumber = getPhoneNumber(lastWord,this);
+                        x=0;
+                        if(contactNumber.equals("Unsaved")) {
+                            String fail;
+                            txt.setText("Please try again !!");
+                            fail = txt.getText().toString();
+                            speechVoice.speak(String.valueOf(fail),QUEUE_FLUSH,null);
+
+                        }
+                    }
+
+                    else if(speech.contains("sms") || speech.contains("SMS"))
+                    {
+                        x=0;
+                        message = speech.substring(speech.indexOf(' ')+1);
+                        Intent smsMsgAppVar = new Intent(Intent.ACTION_VIEW);
+                        smsMsgAppVar.setData(Uri.parse("sms:" +  contactNumber));
+                        smsMsgAppVar.putExtra("sms_body",message);
+                        startActivity(smsMsgAppVar);
+                    }
+                    else if(speech.contains("guidelines")||speech.contains("Guidelines"))
+                    {
+                        x=0;
+
+                        String texthelp = "1. Shake mobile to give voice commands.\n" +
+                                "2. Say Recognise to recognise the image selected.\n" +
+                                "3. Say Open Camera to capture image.\n" +
+                                "4. Say Call and the name of the person to call her.\n" +
+                                "5. Say Send Message to and name of person to message. Followed by SMS and the message ahead.\n" +
+                                "6. Say Open Gallery to select the image from gallery.\n" +
+                                "7. Say Repeat to listen the information again.";
+
+                        speechVoice.speak(String.valueOf(texthelp),QUEUE_FLUSH,null);
+                    }
+                    else
+                    {
+                        x=0;
+                        txt.setText("Please try again !!");
                     }
                 }
 
@@ -338,14 +388,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void openFrontCamera() {
 
-        Camera cam;
+        
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         int cameraCount = Camera.getNumberOfCameras();
         for (int camIdx = 0; camIdx < cameraCount; camIdx++) {
             Camera.getCameraInfo(camIdx, cameraInfo);
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 try {
-                    cam = Camera.open(camIdx);
+                    Camera cam = Camera.open(camIdx);
                 } catch (RuntimeException e) {
                     Log.e("error", "Camera failed to open: " + e.getLocalizedMessage());
                 }
@@ -611,6 +661,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onInit(int i) {
 
+    }
+
+    @Override
+    public void onDestroy() {
+        if (speechVoice != null) {
+            speechVoice.stop();
+            speechVoice.shutdown();
+
+        }
+        super.onDestroy();
     }
 }
 
