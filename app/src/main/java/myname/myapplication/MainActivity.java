@@ -151,11 +151,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
 
-        if (speechVoice != null) {
-            speechVoice.stop();
-            speechVoice.shutdown();
-
-        }
+        
         long curTime  = System.currentTimeMillis();
 
         if((curTime-lastUpdate) > UPDATE_PERIOD){
