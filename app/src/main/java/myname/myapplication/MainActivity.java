@@ -52,19 +52,27 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.sql.Time;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Locale;
 
 import static android.speech.tts.TextToSpeech.QUEUE_FLUSH;
 
+//8d13eb204f6244aab7054208d0b448dd
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener,TextToSpeech.OnInitListener {
 
-    public VisionServiceClient visionServiceClient = new VisionServiceRestClient("b6405521e5fa455ca38d843489a53856","https://westcentralus.api.cognitive.microsoft.com/vision/v1.0");
+    public VisionServiceClient visionServiceClient = new VisionServiceRestClient("80d28822cda5402b8d852830e82c0a79","https://westcentralus.api.cognitive.microsoft.com/vision/v1.0");
 
     TextToSpeech image;
     TextToSpeech face;
     TextToSpeech text;
     TextToSpeech speechVoice;
+    TextToSpeech speechDate;
+    TextToSpeech speechTime;
 
 
     private Sensor accelerometer;
@@ -79,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected static final int REQUEST_CAMERA = 2;
     protected static final int CAMERA_FRONT_REQUEST_CODE = 3;
     protected static final int SELECT_FILE = 4;
-    public static int x=0;
+    public int x=0;
 
 
 
@@ -132,6 +140,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         text.setLanguage(Locale.ENGLISH);
         speechVoice = new TextToSpeech(this,this);
         speechVoice.setLanguage(Locale.ENGLISH);
+        speechDate = new TextToSpeech(this,this);
+        speechDate.setLanguage(Locale.ENGLISH);
+        speechTime = new TextToSpeech(this,this);
+        speechTime.setLanguage(Locale.ENGLISH);
+
 
         //For shake dismiss
         sm = (SensorManager)getSystemService(SENSOR_SERVICE);
@@ -151,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
 
-        
+
         long curTime  = System.currentTimeMillis();
 
         if((curTime-lastUpdate) > UPDATE_PERIOD){
@@ -164,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             float speed = Math.abs(a + b + c - last_a - last_b - last_c)/diffTime * 10000;
             if(speed > SHAKE_THRESHOLD && x==0){
+                x=1;
                 Intent intent = new Intent(
                         RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
 
@@ -207,8 +221,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     speech = new String();
 
                     txt.setText(text.get(0));
+                    x=0;
                     speech = txt.getText().toString();
-                    x=1;
+                    //x=1;
                     if(txt.getText().toString()=="")
                     {
                         x=0;
@@ -218,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
 
 
-                    if(speech.contains("recognise"))
+                    else if(speech.contains("recognise"))
                     {
                         speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
                         getImageRecognized();
@@ -226,6 +241,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     else if(speech.contains("gallery"))
                     {
+                        x=0;
                         speechVoice.speak(String.valueOf(speech),QUEUE_FLUSH,null);
                         openGallery();
                     }
@@ -238,6 +254,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     else if(speech.contains("capture")||txt.getText().toString().contains("camera"))
                     {
+                        x=0;
                         speechVoice.speak(String.valueOf(speech),TextToSpeech.QUEUE_FLUSH,null);
                         CaptureImage();
                     }
@@ -304,11 +321,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                         speechVoice.speak(String.valueOf(texthelp),QUEUE_FLUSH,null);
                     }
+                    else if(speech.contains("time") || speech.contains("date"))
+                    {
+                        x=0;
+                        DateFormat dfDate = new SimpleDateFormat("yyyy/MM/dd");
+                        String date=dfDate.format(Calendar.getInstance().getTime());
+                        DateFormat dfTime = new SimpleDateFormat("HH:mm");
+                        String time = dfTime.format(Calendar.getInstance().getTime());
+                        speechDate.speak("Today is "+String.valueOf(date),QUEUE_FLUSH,null);
+                        speechTime.speak("And the time is "+String.valueOf(time),QUEUE_FLUSH,null);
+                    }
+
                     else
                     {
                         x=0;
                         txt.setText("Please try again !!");
+                        String text1 = txt.getText().toString();
+                        speechVoice.speak(String.valueOf(text1),QUEUE_FLUSH,null);
                     }
+
                 }
 
                 break;
@@ -384,16 +415,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void openFrontCamera() {
 
-        
+        Camera cam;
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
         int cameraCount = Camera.getNumberOfCameras();
         for (int camIdx = 0; camIdx < cameraCount; camIdx++) {
             Camera.getCameraInfo(camIdx, cameraInfo);
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 try {
-                    Camera cam = Camera.open(camIdx);
+                    cam = Camera.open(camIdx);
                 } catch (RuntimeException e) {
-                    Log.e("error", "Camera failed to open: " + e.getLocalizedMessage());
+                    Log.e("", "Camera failed to open: " + e.getLocalizedMessage());
                 }
             }
         }
@@ -667,6 +698,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         }
         super.onDestroy();
+    }
+
+    @Override
+    public void onBackPressed() {
+        x=0;
+        onPause();
+        if (speechVoice != null) {
+            speechVoice.stop();
+            speechVoice.shutdown();
+        }
+        super.onBackPressed();
     }
 }
 
